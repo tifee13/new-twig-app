@@ -37,18 +37,19 @@
     </div>
 
     {# ---- Individual Status Cards ---- #}
+{# ---- Individual Status Cards ---- #}
     <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
       <div class="bg-white p-6 rounded-2xl shadow-lg text-center">
-        <h3 id="openTickets" class="text-5xl font-bold text-color-open">0</h3>
-        <p class="text-xl text-color-text mt-2">Open</p>
+        <h3 id="openTickets" class="text-5xl font-bold text-[#90EE90]">0</h3>
+        <p class="text-xl mt-2">Open</p>
       </div>
       <div class="bg-white p-6 rounded-2xl shadow-lg text-center">
-        <h3 id="inProgressTickets" class="text-5xl font-bold text-color-progress">0</h3>
-        <p class="text-xl text-color-text mt-2">In Progress</p>
+        <h3 id="inProgressTickets" class="text-5xl font-bold text-[#FFD580]">0</h3>
+        <p class="text-xl mt-2">In Progress</p>
       </div>
       <div class="bg-white p-6 rounded-2xl shadow-lg text-center">
-        <h3 id="closedTickets" class="text-5xl font-bold text-color-closed">0</h3>
-        <p class="text-xl text-color-text mt-2">Closed</p>
+        <h3 id="closedTickets" class="text-5xl font-bold text-[#6b7280]">0</h3>
+        <p class="text-xl mt-2">Closed</p>
       </div>
     </div>
 
@@ -110,60 +111,73 @@
         window.ticketsChart.data.datasets[0].data = [stats.open, stats.in_progress, stats.closed];
         window.ticketsChart.update();
       } else {
-        const ctx = document.getElementById('ticketsPieChart').getContext('2d');
-        window.ticketsChart = new Chart(ctx, {
-          type: 'pie',
-          data: {
-            labels: ['Open', 'In Progress', 'Closed'],
-            datasets: [{
-              data: [stats.open, stats.in_progress, stats.closed],
-              backgroundColor: ['#34d399', '#f59e0b', '#6b7280'],
-            }],
-          },
-          options: { responsive: true, maintainAspectRatio: false },
-        });
+              const ctx = document.getElementById('ticketsPieChart').getContext('2d');
+              window.ticketsChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                  labels: ['Open', 'In Progress', 'Closed'],
+                  datasets: [{
+                    data: [stats.open, stats.in_progress, stats.closed],
+                    backgroundColor: ['#34d399', '#f59e0b', '#6b7280'],
+                  }],
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  // ✅ --- ADD THIS BLOCK --- ✅
+                  plugins: {
+                    legend: {
+                      display: false // This hides the legend
+                    }
+                  }
+                  // ✅ --- END OF BLOCK --- ✅
+                },
+              });
+            }
+
+      // --- Update Recent Tickets --- //
+      const recentTicketsContainer = document.getElementById('recentTickets');
+      const sortedTickets = [...tickets].sort(
+        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
+      ).slice(0, 5);
+
+      if (sortedTickets.length === 0) {
+        recentTicketsContainer.innerHTML = '<p class="text-color-text">No recent tickets.</p>';
+      } else {
+        recentTicketsContainer.innerHTML = sortedTickets.map(ticket => {
+          // --- SAFER DATE HANDLING ---
+          let timeAgo = 'just now';
+          if (typeof dateFns !== 'undefined' && dateFns.formatDistanceToNow) {
+            try {
+              timeAgo = dateFns.formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true });
+            } catch (e) {
+              timeAgo = new Date(ticket.createdAt).toLocaleDateString();
+            }
+          } else {
+            timeAgo = new Date(ticket.createdAt).toLocaleDateString();
+          }
+          // --- END SAFER DATE HANDLING ---
+
+          return `
+          <div class="border-b border-gray-200 pb-3 last:border-b-0">
+            <a href="/tickets" class="font-semibold text-[#e498d1ff] hover:underline">${ticket.title}</a>
+            <p class="text-sm text-gray-500">
+              Created ${timeAgo}
+            </p>
+          </div>
+          `;
+        }).join('');
       }
-
-    // --- Update Recent Tickets --- //
-// --- Update Recent Tickets --- //
-      const recentTicketsContainer = document.getElementById('recentTickets');
-      const sortedTickets = [...tickets].sort(
-        (a, b) => new Date(b.createdAt) - new Date(a.createdAt)
-      ).slice(0, 5);
-
-      if (sortedTickets.length === 0) {
-        recentTicketsContainer.innerHTML = '<p class="text-color-text">No recent tickets.</p>';
-      } else {
-        recentTicketsContainer.innerHTML = sortedTickets.map(ticket => {
-          // --- SAFER DATE HANDLING ---
-          let timeAgo = 'just now';
-          if (typeof dateFns !== 'undefined' && dateFns.formatDistanceToNow) {
-            try {
-              timeAgo = dateFns.formatDistanceToNow(new Date(ticket.createdAt), { addSuffix: true });
-            } catch (e) {
-              timeAgo = new Date(ticket.createdAt).toLocaleDateString(); // Fallback
-            }
-          } else {
-              timeAgo = new Date(ticket.createdAt).toLocaleDateString(); // Fallback
-          }
-          // --- END SAFER DATE HANDLING ---
-
-          return `
-          <div class="border-b border-gray-200 pb-3 last:border-b-0">
-            <a href="/tickets" class="font-semibold text-[#e498d1ff] hover:underline">${ticket.title}</a>
-            <p class="text-sm text-gray-500">
-              Created ${timeAgo}
-            </p>
-          </div>
-        `;
-        }).join('');
-      }
+    
+    // --- This brace closes the updateDashboard() function ---
+    } 
 
     // ===================== Event Bindings ===================== //
     document.addEventListener('DOMContentLoaded', () => {
       const createButton = document.getElementById('createTicketBtn');
       if (createButton) {
         createButton.addEventListener('click', () => {
+          // ✅ FIX: Removed stray 's' from here
           if (typeof window.showCreateTicketModalComponent === 'function') {
             window.showCreateTicketModalComponent();
           }
@@ -178,5 +192,3 @@
     });
   </script>
 {% endblock %}
-
-{# --- Include Modal AFTER scripts so it sees updateDashboard --- #}

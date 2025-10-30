@@ -75,41 +75,46 @@ const auth = {
     },
 
   async signup(email, password, name = '') {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        try {
-          const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
-          const normalizedEmail = email.toLowerCase();
-          
-          if (users.some(u => u.email === normalizedEmail)) {
-            reject(new Error('User already exists.'));
-            return;
+      return new Promise((resolve, reject) => {
+        setTimeout(() => {
+          try {
+            const users = JSON.parse(localStorage.getItem(USERS_KEY) || '[]');
+            const normalizedEmail = email.toLowerCase();
+            
+            if (users.some(u => u.email === normalizedEmail)) {
+              reject(new Error('User already exists.'));
+              return;
+            }
+
+            const newUser = {
+              id: `u${Date.now()}`,
+              email: normalizedEmail,
+              name,
+              password,
+              createdAt: new Date().toISOString()
+            };
+
+            users.push(newUser);
+            localStorage.setItem(USERS_KEY, JSON.stringify(users));
+
+            // --- ✅ FIX: Added backticks (`) ---
+            const token = `mock-token-${newUser.id}`;
+            localStorage.setItem(SESSION_KEY, token);
+            
+            // --- VVV ADD THIS LINE VVV ---
+            // Set the cookie for the server-side PHP check, just like in login()
+            document.cookie = "ticketapp_session=true; path=/; max-age=86400"; 
+            // --- ^^^ ADD THIS LINE ^^^ ---
+            
+            const { password: _, ...safeUser } = newUser;
+            window.dispatchEvent(new CustomEvent('authChange', { detail: { user: safeUser } }));
+            resolve({ ...safeUser, token });
+          } catch (error) {
+            reject(new Error('Failed to create account. Please try again.'));
           }
-
-          const newUser = {
-            id: `u${Date.now()}`,
-            email: normalizedEmail,
-            name,
-            password,
-            createdAt: new Date().toISOString()
-          };
-
-          users.push(newUser);
-          localStorage.setItem(USERS_KEY, JSON.stringify(users));
-
-          // --- ✅ FIX: Added backticks (`) ---
-          const token = `mock-token-${newUser.id}`;
-          localStorage.setItem(SESSION_KEY, token);
-          
-          const { password: _, ...safeUser } = newUser;
-          window.dispatchEvent(new CustomEvent('authChange', { detail: { user: safeUser } }));
-          resolve({ ...safeUser, token });
-        } catch (error) {
-          reject(new Error('Failed to create account. Please try again.'));
-        }
-      }, 500);
-    });
-  },
+        }, 500);
+      });
+    },
 
   logout() {
       try {
